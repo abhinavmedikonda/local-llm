@@ -1,0 +1,26 @@
+# Default values for ollama-stack.
+
+# Model configuration
+model:
+  name: "llama3.2:3b"
+
+# Ollama Backend configuration
+ollama:
+  image: "ollama/ollama:latest"
+  port: 11434
+  service:
+    type: ClusterIP
+  persistence:
+    size: 10Gi
+    accessMode: ReadWriteOnce
+
+# Open WebUI configuration
+ui:
+  image: "ghcr.io/open-webui/open-webui:main"
+  port: 8080
+  service:
+    type: NodePort
+    nodePort: 31808
+  persistence:
+    size: 2Gi
+    accessMode: ReadWriteOnce

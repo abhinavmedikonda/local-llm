@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  labels:
+    app: ollama
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+      - name: ollama
+        image: ollama/ollama:latest
+        ports:
+        - containerPort: 11434
+          name: api
+        volumeMounts:
+        - name: ollama-storage
+          mountPath: /root/.ollama
+      - name: helper
+        image: alpine:latest
+        env:
+        - name: MODEL_NAME
+          value: "llama3.2:3b"
+        command: ["sh", "-c"]
+        args:
+        - |
+          apk add --no-cache curl
+          echo "Waiting for Ollama backend to be ready..."
+          until curl -s http://localhost:11434/api/tags > /dev/null; do
+            sleep 2
+          done
+          echo "Ollama is up! Triggering pull for $MODEL_NAME..."
+          curl -X POST http://localhost:11434/api/pull -d "{\"name\": \"$MODEL_NAME\"}"
+          echo "Pull request sent. Sidecar is now standing by."
+          sleep infinity
+      volumes:
+      - name: ollama-storage
+        persistentVolumeClaim:
+          claimName: ollama-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama
+spec:
+  selector:
+    app: ollama
+  ports:
+  - port: 11434
+    targetPort: 11434
+    name: api
+  type: ClusterIP

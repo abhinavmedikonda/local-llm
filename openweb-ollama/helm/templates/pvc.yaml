@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-pvc
+  labels:
+    {{- include "ollama-stack.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.ollama.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.ollama.persistence.size }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: webui-pvc
+  labels:
+    {{- include "ollama-stack.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.ui.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.ui.persistence.size }}

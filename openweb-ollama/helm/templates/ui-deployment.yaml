@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui
+  labels:
+    {{- include "ollama-stack.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ollama-stack.selectorLabels" . | nindent 6 }}
+      app: ui
+  template:
+    metadata:
+      labels:
+        {{- include "ollama-stack.selectorLabels" . | nindent 8 }}
+        app: ui
+    spec:
+      containers:
+      - name: ui
+        image: {{ .Values.ui.image }}
+        ports:
+        - containerPort: {{ .Values.ui.port }}
+          name: http
+        env:
+        - name: OLLAMA_BASE_URL
+          value: "http://ollama:{{ .Values.ollama.port }}"
+        volumeMounts:
+        - name: webui-storage
+          mountPath: /app/backend/data
+      volumes:
+      - name: webui-storage
+        persistentVolumeClaim:
+          claimName: webui-pvc

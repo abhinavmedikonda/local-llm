@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  labels:
+    {{- include "ollama-stack.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ollama-stack.selectorLabels" . | nindent 6 }}
+      app: ollama
+  template:
+    metadata:
+      labels:
+        {{- include "ollama-stack.selectorLabels" . | nindent 8 }}
+        app: ollama
+    spec:
+      containers:
+      - name: ollama
+        image: {{ .Values.ollama.image }}
+        ports:
+        - containerPort: {{ .Values.ollama.port }}
+          name: api
+        volumeMounts:
+        - name: ollama-storage
+          mountPath: /root/.ollama
+      - name: helper
+        image: alpine:latest
+        env:
+        - name: MODEL_NAME
+          value: {{ .Values.model.name | quote }}
+        command: ["sh", "-c"]
+        args:
+        - |
+          apk add --no-cache curl
+          echo "Waiting for Ollama backend to be ready..."
+          until curl -s http://localhost:{{ .Values.ollama.port }}/api/tags > /dev/null; do
+            sleep 2
+          done
+          echo "Ollama is up! Triggering pull for $MODEL_NAME..."
+          curl -X POST http://localhost:{{ .Values.ollama.port }}/api/pull -d "{\"name\": \"$MODEL_NAME\"}"
+          echo "Pull request sent. Sidecar is now standing by."
+          sleep infinity
+      volumes:
+      - name: ollama-storage
+        persistentVolumeClaim:
+          claimName: ollama-pvc
