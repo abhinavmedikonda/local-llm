@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dmr
+spec:
+  selector:
+    app: dmr
+  ports:
+  - port: {{ .Values.backend.port }}
+    targetPort: {{ .Values.backend.port }}
+    name: api
+  type: {{ .Values.backend.service.type }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui
+spec:
+  selector:
+    app: ui
+  ports:
+  - port: 80
+    targetPort: {{ .Values.ui.port }}
+    name: http
+    {{- if eq .Values.ui.service.type "NodePort" }}
+    nodePort: {{ .Values.ui.service.nodePort }}
+    {{- end }}
+  type: {{ .Values.ui.service.type }}

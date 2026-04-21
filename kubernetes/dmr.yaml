@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dmr
+  labels:
+    app: dmr
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dmr
+  template:
+    metadata:
+      labels:
+        app: dmr
+    spec:
+      containers:
+      - name: dmr
+        image: docker/model-runner:latest
+        ports:
+        - containerPort: 12434
+          name: api
+        volumeMounts:
+        - name: dmr-storage
+          mountPath: /root/.model-runner
+      - name: helper
+        image: alpine:latest
+        env:
+        - name: MODEL_NAME
+          value: "ai/smollm2:135M-Q4_K_M"
+        command: ["sh", "-c"]
+        args:
+        - |
+          apk add --no-cache curl
+          echo "Waiting for DMR backend to be ready..."
+          until curl -s http://localhost:12434/metrics > /dev/null; do
+            sleep 2
+          done
+          echo "DMR is up! Triggering pull for $MODEL_NAME..."
+          curl -X POST http://localhost:12434/models/create -d "{\"from\": \"$MODEL_NAME\"}"
+          echo "Pull request sent. Sidecar is now standing by."
+          sleep infinity
+      volumes:
+      - name: dmr-storage
+        persistentVolumeClaim:
+          claimName: dmr-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dmr
+spec:
+  selector:
+    app: dmr
+  ports:
+  - port: 12434
+    targetPort: 12434
+    name: api
+  type: ClusterIP

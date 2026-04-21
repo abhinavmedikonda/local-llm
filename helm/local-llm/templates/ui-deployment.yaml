@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui
+  labels:
+    {{- include "local-llm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "local-llm.selectorLabels" . | nindent 6 }}
+      app: ui
+  template:
+    metadata:
+      labels:
+        {{- include "local-llm.selectorLabels" . | nindent 8 }}
+        app: ui
+    spec:
+      containers:
+      - name: ui
+        image: {{ .Values.ui.image }}
+        ports:
+        - containerPort: {{ .Values.ui.port }}
+          name: http
+        env:
+        - name: OPENAI_API_KEY
+          value: {{ .Values.ui.env.openaiApiKey | quote }}
+        - name: BASE_URL
+          value: "http://dmr:{{ .Values.backend.port }}/engines"
+        - name: CUSTOM_MODELS
+          value: "-all,{{ .Values.model.id }}"
+        - name: HIDE_USER_API_KEY
+          value: {{ .Values.ui.env.hideUserApiKey | quote }}

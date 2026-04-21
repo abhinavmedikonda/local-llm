@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dmr
+  labels:
+    {{- include "local-llm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "local-llm.selectorLabels" . | nindent 6 }}
+      app: dmr
+  template:
+    metadata:
+      labels:
+        {{- include "local-llm.selectorLabels" . | nindent 8 }}
+        app: dmr
+    spec:
+      containers:
+      - name: dmr
+        image: {{ .Values.backend.image }}
+        ports:
+        - containerPort: {{ .Values.backend.port }}
+          name: api
+        volumeMounts:
+        - name: dmr-storage
+          mountPath: /root/.model-runner
+      - name: helper
+        image: alpine:latest
+        env:
+        - name: MODEL_NAME
+          value: {{ .Values.model.name | quote }}
+        command: ["sh", "-c"]
+        args:
+        - |
+          apk add --no-cache curl
+          echo "Waiting for DMR backend to be ready..."
+          until curl -s http://localhost:12434/metrics > /dev/null; do
+            sleep 2
+          done
+          echo "DMR is up! Triggering pull for $MODEL_NAME..."
+          curl -X POST http://localhost:12434/models/create -d "{\"from\": \"$MODEL_NAME\"}"
+          echo "Pull request sent. Sidecar is now standing by."
+          sleep infinity
+      volumes:
+      - name: dmr-storage
+        persistentVolumeClaim:
+          claimName: dmr-pvc

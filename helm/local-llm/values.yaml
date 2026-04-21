@@ -1,0 +1,28 @@
+# Default values for local-llm.
+
+# Model configuration
+model:
+  name: "ai/smollm2:135M-Q4_K_M"
+  id: "docker.io/ai/smollm2:135M-Q4_K_M"
+
+# DMR Backend configuration
+backend:
+  image: "docker/model-runner:latest"
+  port: 12434
+  service:
+    type: ClusterIP
+  # persistence is managed by the pvc.yaml template
+  persistence:
+    size: 10Gi
+    accessMode: ReadWriteOnce
+
+# NextChat UI configuration
+ui:
+  image: "yidadaa/chatgpt-next-web:latest"
+  port: 3000
+  service:
+    type: NodePort
+    nodePort: 31703
+  env:
+    openaiApiKey: "sk-dummy"
+    hideUserApiKey: "1"
